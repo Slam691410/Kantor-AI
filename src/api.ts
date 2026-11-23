@@ -101,6 +101,10 @@ export const api = {
     if (isAppsScriptRuntime()) return gasDispatch<{ ok: boolean }>('auth.logout', token);
     return request<{ ok: boolean }>('/api/auth/logout', token, { method: 'POST' });
   },
+  getMe(token: string) {
+    if (isAppsScriptRuntime()) return gasDispatch<{ user: UserPublic }>('auth.me', token);
+    return request<{ user: UserPublic }>('/api/auth/me', token);
+  },
   getDashboard(token: string) {
     if (isAppsScriptRuntime()) return gasDispatch<DashboardData>('dashboard.get', token);
     return request<DashboardData>('/api/dashboard', token);

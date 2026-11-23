@@ -149,7 +149,7 @@ export const GeminiAssistPanel: React.FC<GeminiAssistPanelProps> = ({
           </p>
         </div>
         <span className="px-2 py-1 rounded-md bg-[#131f36] border border-[#22365c] text-[10.5px] font-mono text-[#7dd3fc]">
-          Model: gemini-4-hydrogen
+          Model: gemini-2.5-flash
         </span>
       </div>
 

@@ -10,7 +10,7 @@ interface FaceCaptureBoxProps {
 export const FaceCaptureBox: React.FC<FaceCaptureBoxProps> = ({
   value,
   onChange,
-  title = '1. Verifikasi Wajah (Kamera)',
+  title = '1. Foto Wajah (Kamera)',
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -158,7 +158,7 @@ export const FaceCaptureBox: React.FC<FaceCaptureBoxProps> = ({
           <div className="text-center px-4">
             <Camera className="w-8 h-8 text-[#5c7299] mx-auto mb-1.5" />
             <p className="text-[11.5px] text-[#9fb0d0]">
-              Aktifkan kamera depan untuk memindai wajah Anda secara langsung.
+              Aktifkan kamera depan untuk mengambil foto wajah.
             </p>
           </div>
         )}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
+import type { User } from '@firebase/auth';
 import {
   Calendar,
   CheckSquare,

@@ -44,6 +44,7 @@ const result = await esbuild.build({
   define: {
     'process.env.NODE_ENV': '"production"',
     'import.meta.env.VITE_GOOGLE_MAPS_API_KEY': '""',
+    'import.meta.env.VITE_GOOGLE_MAP_ID': '""',
     'import.meta.env.DEV': 'false',
     'import.meta.env.PROD': 'true',
   },

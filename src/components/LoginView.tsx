@@ -161,7 +161,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ prefillId, onSuccess }) =>
     e.preventDefault();
     setError('');
     if (!faceImage) {
-      setError('Langkah 1 belum selesai: ambil foto verifikasi wajah terlebih dahulu.');
+      setError('Langkah 1 belum selesai: ambil foto wajah terlebih dahulu.');
       return;
     }
     if (!geoLocation) {
@@ -203,7 +203,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ prefillId, onSuccess }) =>
             Gerbang Tunggal Papan Kerja &amp; Sistem Kerja
           </div>
           <h3 className="mt-1 text-[17px] font-bold text-[#e8eefc]">
-            Masuk dengan Verifikasi Wajah, Google Maps &amp; OTP Email
+            Masuk dengan Foto Wajah, Google Maps &amp; OTP Email
           </h3>
           <p className="mt-1 text-[12px] text-[#9fb0d0] max-w-[780px]">
             Mendukung kapasitas penuh <b className="text-[#e8eefc]">{counts.fteTotal} Karyawan FTE</b>{' '}
@@ -221,7 +221,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ prefillId, onSuccess }) =>
                 : 'bg-[#0f1a2c] border-[#22365c] text-[#9fb0d0]'
             }`}
           >
-            1. Wajah {faceReady ? '✓' : '·'}
+            1. Foto Wajah {faceReady ? '✓' : '·'}
           </span>
           <span
             className={`px-2 py-1 rounded border ${
@@ -472,7 +472,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ prefillId, onSuccess }) =>
         >
           <ShieldCheck className="w-4 h-4" />
           {loading
-            ? 'Memverifikasi Wajah, Lokasi Maps & OTP…'
+            ? 'Memvalidasi Foto, Lokasi Maps & OTP…'
             : 'Verifikasi 3 Faktor & Masuk Ruang Kerja'}
         </button>
 

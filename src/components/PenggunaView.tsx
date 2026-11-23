@@ -300,7 +300,7 @@ export const PenggunaView: React.FC<PenggunaViewProps> = ({
         className="bg-[#131f36] border border-[#22365c] rounded-[12px] p-4"
       >
         <b className="text-sm text-[#e8eefc]">
-          Tambah Pengguna (Verifikasi Wajah · Maps · OTP Email)
+          Tambah Pengguna (Foto Wajah · Maps · OTP Email)
         </b>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mt-2">
           <div>
