@@ -1,0 +1,40 @@
+<!doctype html><html lang="id"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Holding Investasi — Apps Script</title><style>
+body{font:14px/1.5 Arial,sans-serif;background:#f4f7fc;color:#16202f;margin:0}main{max-width:860px;margin:0 auto;padding:18px}
+.card{background:#fff;border:1px solid #d7dfec;border-radius:12px;padding:14px;margin-bottom:12px}button{background:#1f3864;color:#fff;border:0;border-radius:8px;padding:8px 13px;cursor:pointer;font-weight:700}
+input,select{border:1px solid #d7dfec;border-radius:8px;padding:8px;width:100%;box-sizing:border-box}label{font-size:11px;font-weight:700;color:#5f6f86;display:block;margin-top:8px}
+.ev{padding:7px 0;border-bottom:1px dashed #e4ebf6;font-size:12.5px}.err{color:#a5342a;font-size:12.5px}nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}nav button{background:#fff;color:#1f3864;border:1px solid #d7dfec}nav button.on{background:#1f3864;color:#fff}section{display:none}section.on{display:block}
+</style></head><body><main>
+<div id="login" class="card"><h2 style="color:#1f3864;margin:0">Holding Investasi — Versi Apps Script</h2>
+<p style="color:#5f6f86;font-size:12.5px">Database Google Sheets · Holding modal sendiri, bukan pialang. Contoh: M1/1111 · M2/2222 · M7/7777 · M9/9999 (tamu) · M10/1010 (freelancer). Wajib ganti PIN contoh untuk produksi (saat ini PIN contoh tersimpan sebagai hash; penggantian PIN via editor Sheet).</p>
+<label>ID<input id="liId"></label><label>PIN<input id="liPin" type="password"></label>
+<button id="liGo" style="width:100%;margin-top:12px">Masuk</button><div id="liErr" class="err"></div></div>
+
+<div id="app" style="display:none"><div class="card"><b id="me"></b> <button id="btnOut" style="float:right">Keluar</button><div style="clear:both"></div></div>
+<nav><button data-v="dash" class="on">Dashboard</button><button data-v="intake">Intake</button><button data-v="keu">Keuangan</button><button data-v="tugas">Tugas</button><button data-v="absen">Absensi</button><button data-v="audit">Audit</button></nav>
+<section id="v-dash" class="on"><div class="card" id="dIsi">Memuat…</div></section>
+<section id="v-intake"><div class="card"><b>Permintaan baru</b><label>Judul<input id="iJudul"></label><label>Nilai (Rp)<input id="iNilai" type="number"></label><button id="iGo" style="margin-top:9px">Kirim</button></div><div class="card" id="iList"></div></section>
+<section id="v-keu"><div class="card"><b>Catat kas</b><label>Jenis<select id="fJenis"><option>Masuk</option><option>Keluar</option></select></label><label>Kategori<input id="fKat"></label><label>Nominal<input id="fNom" type="number"></label><label>Keterangan<input id="fKet"></label><button id="fGo" style="margin-top:9px">Simpan</button></div><div class="card" id="fList"></div></section>
+<section id="v-tugas"><div class="card" id="tList"></div></section>
+<section id="v-absen"><div class="card"><b>Absen (PIN + lokasi teks)</b><p style="font-size:12px;color:#5f6f86">Versi Apps Script: tanpa kamera/biometrik — foto & verifikasi wajah ada di server utama. Hasil absen tetap menunggu verifikasi atasan.</p><label>Lokasi<input id="aLok"></label><label>PIN<input id="aPin" type="password"></label><div style="margin-top:9px;display:flex;gap:6px"><button id="aIn">Absen masuk</button><button id="aOut">Absen keluar</button></div><div id="aMsg" style="font-size:12.5px;margin-top:8px"></div></div></section>
+<section id="v-audit"><div class="card" id="auList"></div></section></div>
+<div id="msg" style="position:fixed;right:14px;bottom:14px;background:#16294a;color:#fff;padding:10px 13px;border-radius:10px;display:none;font-size:12.5px;max-width:88vw"></div>
+<script>
+var TOK='',ME=null; function $(s){return document.querySelector(s);} function $$(s){return [...document.querySelectorAll(s)];}
+function toast(t){var m=$('#msg');m.textContent=t;m.style.display='block';setTimeout(()=>m.style.display='none',4000);}
+function run(fn,ok){ var args=[].slice.call(arguments,2); google.script.run.withSuccessHandler(ok).withFailureHandler(e=>toast(e.message))[fn].apply(null,args); }
+var rp=n=>{n=+n||0;return 'Rp'+n.toLocaleString('id-ID');};
+$('#liGo').onclick=()=>run('login',r=>{TOK=r.token;ME=r.user;$('#login').style.display='none';$('#app').style.display='block';$('#me').textContent=ME.Nama+' — '+ME.Jabatan+' ('+ME.Tier+')';loadDash();},$('#liId').value,$('#liPin').value);
+$('#btnOut').onclick=()=>location.reload();
+function show(v){ $$('section').forEach(s=>s.classList.toggle('on',s.id==='v-'+v)); $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); ({dash:loadDash,intake:loadIntake,keu:loadKeu,tugas:loadTugas,audit:loadAudit}[v]||(()=>{}))(); }
+$$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+function loadDash(){ run('getDashboard',j=>{ $('#dIsi').innerHTML='<b>Antrean:</b> '+j.antrean+' · <b>Tugas selesai:</b> '+j.tugasSelesai+'/'+j.totalTugas+' · <b>Saldo kas:</b> '+rp(j.saldoKas)+'<hr>'+j.auditTerakhir.map(a=>'<div class="ev">'+a.Waktu+' — <b>'+a.Siapa+'</b> '+a.Aksi+'</div>').join(''); },TOK); }
+function loadIntake(){ run('listIntake',list=>{ $('#iList').innerHTML=list.map(x=>'<div class="ev"><b>'+x.ID+' · '+x.Judul+'</b> — '+x.Status+' · '+rp(x.Nilai)+' · '+x.Pengaju+'<br>'+['Direview','Perlu Info','Disetujui','Ditolak'].map(a=>'<button data-id="'+x.ID+'" data-a="'+a+'">'+a+'</button>').join(' ')+'</div>').join('')||'Antrean kosong.'; $$('#iList button').forEach(b=>b.onclick=()=>run('aksiIntake',()=>loadIntake(),TOK,b.dataset.id,b.dataset.a)); },TOK); }
+$('#iGo').onclick=()=>run('buatIntake',()=>{toast('Terkirim.');loadIntake();},TOK,{judul:$('#iJudul').value,nilai:+$('#iNilai').value});
+function loadKeu(){ run('listKeuangan',list=>{ $('#fList').innerHTML=list.map(x=>'<div class="ev"><b>'+x.Jenis+' '+rp(x.Nominal)+'</b> — '+x.Kategori+' · '+x.Oleh+' · '+x.Status+'<br>'+x.Keterangan+'</div>').join('')||'Belum ada transaksi.'; },TOK); }
+$('#fGo').onclick=()=>run('tambahKeuangan',()=>{toast('Tersimpan.');loadKeu();},TOK,{jenis:$('#fJenis').value,kategori:$('#fKat').value,nominal:+$('#fNom').value,keterangan:$('#fKet').value});
+function loadTugas(){ run('listTugas',list=>{ $('#tList').innerHTML=list.map((t,i)=>'<div class="ev"><b>'+t.Kategori+'</b> — '+t.Tugas+' <select data-i="'+i+'"><option '+(t.Status==='Belum'?'selected':'')+'>Belum</option><option '+(t.Status==='Proses'?'selected':'')+'>Proses</option><option '+(t.Status==='Selesai'?'selected':'')+'>Selesai</option></select></div>').join(''); $$('#tList select').forEach(s=>s.onchange=()=>run('ubahTugas',()=>toast('Tersimpan.'),TOK,+s.dataset.i,s.value)); },TOK); }
+function absen(jenis){ run('absen',x=>{$('#aMsg').textContent='Tercatat '+x.Jam+' — status: '+x.StatusVerifikasi;},TOK,$('#aPin').value,jenis,$('#aLok').value); }
+$('#aIn').onclick=()=>absen('in'); $('#aOut').onclick=()=>absen('out');
+function loadAudit(){ run('listAudit',list=>{ $('#auList').innerHTML=list.map(a=>'<div class="ev">'+a.Waktu+' — <b>'+a.Siapa+'</b> '+a.Aksi+' ('+a.Modul+')</div>').join(''); },TOK); }
+</script></main></body></html>

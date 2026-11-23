@@ -1,0 +1,14 @@
+{
+  "name": "holding-investasi-appscript",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Holding Investasi — Paket Deploy Google Apps Script + Google Sheets",
+  "scripts": {
+    "push": "clasp push",
+    "open": "clasp open",
+    "deploy": "clasp deploy -d \"Holding Investasi Web App\""
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}

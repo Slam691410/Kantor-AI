@@ -1,0 +1,6 @@
+{
+  "name": "Holding Investasi",
+  "description": "Portal terpadu Kantor AI & Sistem Kerja Holding Investasi dengan verifikasi Wajah, lokasi Google Maps, OTP Email, kontrol RAPID, buku kas, dan jejak audit.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

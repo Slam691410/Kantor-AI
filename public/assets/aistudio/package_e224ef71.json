@@ -1,0 +1,13 @@
+{
+  "name": "holding-investasi-appsscript",
+  "private": true,
+  "description": "Versi Google Apps Script — Holding Investasi (database Google Sheets)",
+  "scripts": {
+    "push": "clasp push",
+    "open": "clasp open",
+    "deploy": "clasp deploy --description \"Holding Investasi\""
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}

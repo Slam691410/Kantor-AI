@@ -1,0 +1,6 @@
+node_modules/**
+.git/**
+DEPLOY.md
+package.json
+package-lock.json
+.clasp.json.example
