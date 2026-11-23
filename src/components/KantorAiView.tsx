@@ -539,7 +539,7 @@ export const KantorAiView: React.FC<KantorAiViewProps> = ({
   const handleOpenChat = (targetId: string) => {
     if (!user || !officeMember) {
       setLocalPrefillId(targetId.startsWith('M') || targetId.startsWith('FL-') || targetId === 'OWN1' ? targetId : null);
-      onNotify('Verifikasi Wajah, Maps & OTP Email di bawah dulu untuk memberi instruksi.', true);
+      onNotify('Foto Wajah, Maps & OTP Email di bawah dulu untuk memberi instruksi.', true);
       scrollToWorkspace();
       return;
     }

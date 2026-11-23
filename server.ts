@@ -70,12 +70,13 @@ interface AuthedRequest extends Request {
 }
 
 const PORT = Number(process.env.PORT || 3000);
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_DIR = path.resolve(process.cwd(), process.env.DATA_DIR || 'data');
 const DB_FILE = path.resolve(DATA_DIR, 'holding-db.json');
 const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OFFICE_LAT = -6.2297;
 const OFFICE_LNG = 106.8095;
+const GEMINI_MODEL = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim() || 'gemini-2.5-flash';
 
 const VALID_TIERS: ReadonlySet<UserTier> = new Set([
   'Pemilik',
@@ -287,7 +288,7 @@ function makeSeedDb(): DatabaseSchema {
         Judul: 'Alokasi Obligasi Korporasi Tenor 3 Tahun — Seri A',
         Kategori: 'Investasi',
         Nilai: 6_500_000_000,
-        Unit: 'D2 Investasi',
+        Unit: 'D2 · Ekuitas Publik',
         Pengaju: 'Kirana Prameswari',
         Status: 'Direview',
         Riwayat: `${now} dibuat Kirana Prameswari | ${now} Kirana Prameswari -> Direview`,
@@ -298,7 +299,7 @@ function makeSeedDb(): DatabaseSchema {
         Judul: 'Penambahan Posisi Ekuitas Blue-Chip Sektor Perbankan',
         Kategori: 'Investasi',
         Nilai: 1_250_000_000,
-        Unit: 'D3 Pasar Modal',
+        Unit: 'D3 · Seleksi Reksa Dana & ETF',
         Pengaju: 'Bimo Saputra',
         Status: 'Masuk',
         Riwayat: `${now} dibuat Bimo Saputra`,
@@ -309,7 +310,7 @@ function makeSeedDb(): DatabaseSchema {
         Judul: 'Pembaruan Lisensi Terminal Data & Sistem Kepatuhan',
         Kategori: 'Operasional',
         Nilai: 185_000_000,
-        Unit: 'S12 GA',
+        Unit: 'S12 · General Affairs, Fasilitas & Umum',
         Pengaju: 'Yusuf Maulana',
         Status: 'Masuk',
         Riwayat: `${now} dibuat Yusuf Maulana`,
@@ -487,7 +488,15 @@ function loadOrInitDb(): DatabaseSchema {
       saveDb(loaded);
     }
     return loaded;
-  } catch {
+  } catch (err) {
+    // Jangan hapus data diam-diam: arsipkan berkas rusak lalu mulai dari seed.
+    try {
+      const backup = path.resolve(DATA_DIR, `holding-db.corrupt-${Date.now()}.json`);
+      fs.copyFileSync(DB_FILE, backup);
+      console.error(`[DB] Berkas rusak diarsipkan ke ${backup}:`, err);
+    } catch {
+      // abaikan kegagalan arsip
+    }
     const initial = makeSeedDb();
     saveDb(initial);
     return initial;
@@ -498,7 +507,10 @@ function saveDb(db: DatabaseSchema): void {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  const tempFile = path.resolve(DATA_DIR, `holding-db.${process.pid}.tmp`);
+  const tempFile = path.resolve(
+    DATA_DIR,
+    `holding-db.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`
+  );
   fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), 'utf8');
   fs.renameSync(tempFile, DB_FILE);
 }
@@ -602,10 +614,24 @@ async function sendEmailOtp(email: string, nama: string, otp: string): Promise<'
 async function createApp(): Promise<void> {
   const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   app.use(express.json({ limit: '2mb' }));
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, service: 'holding-investasi', auth: 'face-maps-email-otp' });
+    res.json({
+      ok: true,
+      service: 'holding-investasi',
+      auth: 'face-maps-email-otp',
+      model: GEMINI_MODEL,
+      time: sekarangWib(),
+    });
   });
 
   app.get('/api/auth/profiles', (_req, res) => {
@@ -700,13 +726,13 @@ async function createApp(): Promise<void> {
     }
 
     const faceCheck = validateFaceImage(req.body?.faceImage);
-    if (!faceCheck.ok) {
+    if (faceCheck.ok === false) {
       res.status(400).json({ error: faceCheck.error });
       return;
     }
 
     const coordCheck = validateCoordinates(req.body?.lat, req.body?.lng);
-    if (!coordCheck.ok) {
+    if (coordCheck.ok === false) {
       res.status(400).json({ error: coordCheck.error });
       return;
     }
@@ -1091,13 +1117,13 @@ async function createApp(): Promise<void> {
           : 'Lokasi Google Maps';
 
       const faceCheck = validateFaceImage(req.body?.faceImage);
-      if (!faceCheck.ok) {
+      if (faceCheck.ok === false) {
         res.status(400).json({ error: faceCheck.error });
         return;
       }
 
       const coordCheck = validateCoordinates(req.body?.lat, req.body?.lng);
-      if (!coordCheck.ok) {
+      if (coordCheck.ok === false) {
         res.status(400).json({ error: coordCheck.error });
         return;
       }
@@ -1174,13 +1200,17 @@ async function createApp(): Promise<void> {
         res.status(400).json({ error: 'Judul dan isi dokumen wajib diisi.' });
         return;
       }
+      if (isi.length > 20_000) {
+        res.status(400).json({ error: 'Isi dokumen melebihi batas 20.000 karakter.' });
+        return;
+      }
 
       const item: DokumenItem = {
         ID: generateId('DOK'),
         Judul: judul.slice(0, 180),
         Jenis: jenis,
         Oleh: user.Nama,
-        Isi: isi.slice(0, 5000),
+        Isi: isi,
         Tanggal: tanggalWib(),
       };
       db.dokumen.push(item);
@@ -1356,7 +1386,7 @@ async function createApp(): Promise<void> {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
+        model: GEMINI_MODEL,
         contents: `${modeInstruction[mode]}\n\nPermintaan pengguna:\n${promptText}`,
         config: {
           systemInstruction: systemContext,
@@ -1374,7 +1404,7 @@ async function createApp(): Promise<void> {
       );
       res.json({
         text,
-        model: 'gemini-4-hydrogen',
+        model: GEMINI_MODEL,
         mode,
         timestamp: sekarangWib(),
       });
@@ -1446,6 +1476,14 @@ async function createApp(): Promise<void> {
     res.send(content);
   });
 
+  // Panduan template Markdown milik repo (tidak berisi data operasional pengguna).
+  app.use('/docs', express.static(path.resolve(process.cwd(), 'docs'), { index: false }));
+
+  // Rute API yang tidak dikenal harus menjadi 404 JSON, bukan fallback SPA HTML.
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Rute API tidak ditemukan.' });
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -1456,14 +1494,23 @@ async function createApp(): Promise<void> {
   } else {
     const distDir = path.resolve(process.cwd(), 'dist');
     app.use(express.static(distDir));
-    app.get('/{*splat}', (_req, res) => {
+    // Express 4: wildcard SPA fallback (bukan sintaks Express 5 `/{*splat}`).
+    app.get('*', (_req, res) => {
       res.sendFile(path.resolve(distDir, 'index.html'));
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Holding Investasi server aktif pada http://0.0.0.0:${PORT}`);
   });
+
+  const shutdown = (signal: string) => {
+    console.log(`${signal} diterima, menutup server...`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 createApp().catch((err) => {

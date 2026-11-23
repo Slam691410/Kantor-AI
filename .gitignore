@@ -4,6 +4,11 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+.env
+.env.*
 !.env.example
-data/
+# Hanya folder data/ di root (database JSON runtime) — JANGAN pakai `data/`
+# karena akan ikut mengabaikan src/data/ (data portal statis).
+/data/
+*.tmp
+holding-db.corrupt-*.json

@@ -6,6 +6,7 @@ import { KantorAiView } from './components/KantorAiView';
 import { KatalogView } from './components/KatalogView';
 import { OrganisasiView } from './components/OrganisasiView';
 import { PembagianTugasView } from './components/PembagianTugasView';
+import { PustakaDokumenView } from './components/PustakaDokumenView';
 import { RingkasanView } from './components/RingkasanView';
 import { StrukturInvestasiView } from './components/StrukturInvestasiView';
 import type { UserPublic } from './types';
@@ -17,6 +18,7 @@ type PortalTab =
   | 'tugas'
   | 'inv'
   | 'aset'
+  | 'dokumen'
   | 'alur';
 
 const PORTAL_TABS: Array<{ id: PortalTab; label: string }> = [
@@ -26,6 +28,7 @@ const PORTAL_TABS: Array<{ id: PortalTab; label: string }> = [
   { id: 'tugas', label: 'Pembagian Tugas' },
   { id: 'inv', label: 'Struktur Investasi' },
   { id: 'aset', label: 'Katalog 160 Aset' },
+  { id: 'dokumen', label: 'Dokumen & Arsip' },
   { id: 'alur', label: 'Alur Kerja' },
 ];
 
@@ -38,13 +41,43 @@ function getWibClockText(): string {
   return `${hh}.${mm}.${ss} WIB`;
 }
 
+const SESSION_KEY = 'hi_session_v1';
+
+function readStoredSession(): { token: string; user: UserPublic } | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { token?: string; user?: UserPublic };
+    if (!parsed.token || !parsed.user) return null;
+    return { token: parsed.token, user: parsed.user };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(token: string, user: UserPublic): void {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token, user }));
+  } catch {
+    // abaikan bila storage tidak tersedia
+  }
+}
+
+function clearStoredSession(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // abaikan
+  }
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<PortalTab>('kantor');
   const [drawerSel, setDrawerSel] = useState<DrawerSelection>(null);
   const [wibClock, setWibClock] = useState<string>(getWibClockText);
 
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<UserPublic | null>(null);
+  const [token, setToken] = useState<string | null>(() => readStoredSession()?.token ?? null);
+  const [user, setUser] = useState<UserPublic | null>(() => readStoredSession()?.user ?? null);
   const [prefillMemberId, setPrefillMemberId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; isError: boolean } | null>(null);
   const [mapsQuotaExceeded, setMapsQuotaExceeded] = useState(false);
@@ -72,10 +105,35 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Validasi ulang sesi tersimpan saat aplikasi dimuat (refresh tidak perlu login ulang).
+  useEffect(() => {
+    const stored = readStoredSession();
+    if (!stored) return;
+    let active = true;
+    api
+      .getMe(stored.token)
+      .then((res) => {
+        if (!active) return;
+        setToken(stored.token);
+        setUser(res.user);
+        writeStoredSession(stored.token, res.user);
+      })
+      .catch(() => {
+        if (!active) return;
+        clearStoredSession();
+        setToken(null);
+        setUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleLoginSuccess = useCallback(
     (newToken: string, loggedUser: UserPublic) => {
       setToken(newToken);
       setUser(loggedUser);
+      writeStoredSession(newToken, loggedUser);
       setPrefillMemberId(null);
       notify(`Selamat datang, ${loggedUser.Nama}.`);
     },
@@ -85,6 +143,7 @@ export default function App() {
   const handleSessionExpired = useCallback(() => {
     setToken(null);
     setUser(null);
+    clearStoredSession();
     notify('Sesi berakhir. Silakan verifikasi ulang (Wajah, Maps & OTP Email).', true);
   }, [notify]);
 
@@ -94,6 +153,7 @@ export default function App() {
     }
     setToken(null);
     setUser(null);
+    clearStoredSession();
     notify('Anda telah keluar dari Papan & Sistem Kerja.');
   }, [token, notify]);
 
@@ -223,6 +283,7 @@ export default function App() {
         {activeTab === 'tugas' && <PembagianTugasView />}
         {activeTab === 'inv' && <StrukturInvestasiView onSelect={setDrawerSel} />}
         {activeTab === 'aset' && <KatalogView />}
+        {activeTab === 'dokumen' && <PustakaDokumenView />}
         {activeTab === 'alur' && <AlurKerjaView />}
       </main>
 

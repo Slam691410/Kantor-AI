@@ -1,11 +1,11 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from '@firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
   type User,
-} from 'firebase/auth';
+} from '@firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export const WORKSPACE_SCOPES = [
@@ -17,16 +17,30 @@ export const WORKSPACE_SCOPES = [
   'https://www.googleapis.com/auth/tasks',
 ] as const;
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// Inisialisasi malas (lazy): jangan crash seluruh aplikasi bila Firebase
+// belum dikonfigurasi — Workspace hanya dipakai saat panel dibuka.
+let _auth: ReturnType<typeof getAuth> | null = null;
+let _provider: GoogleAuthProvider | null = null;
 
-const provider = new GoogleAuthProvider();
-for (const scope of WORKSPACE_SCOPES) {
-  provider.addScope(scope);
+function getAuthInstance() {
+  if (!_auth) {
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    _auth = getAuth(app);
+  }
+  return _auth;
 }
-provider.setCustomParameters({
-  prompt: 'consent select_account',
-});
+
+function getProvider(): GoogleAuthProvider {
+  if (!_provider) {
+    _provider = new GoogleAuthProvider();
+    for (const scope of WORKSPACE_SCOPES) {
+      _provider.addScope(scope);
+    }
+    // Nilai valid Firebase: 'consent' | 'select_account' | 'none' | 'force'.
+    _provider.setCustomParameters({ prompt: 'consent' });
+  }
+  return _provider;
+}
 
 // Strict in-memory OAuth access token cache only (never localStorage/sessionStorage)
 let isSigningIn = false;
@@ -43,7 +57,7 @@ export const initWorkspaceAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: (user: User | null) => void
 ) => {
-  return onAuthStateChanged(auth, (user: User | null) => {
+  return onAuthStateChanged(getAuthInstance(), (user: User | null) => {
     if (user && cachedAccessToken) {
       onAuthSuccess?.(user, cachedAccessToken);
     } else if (!isSigningIn) {
@@ -59,7 +73,7 @@ export const googleWorkspaceSignIn = async (): Promise<{
 }> => {
   isSigningIn = true;
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(getAuthInstance(), getProvider());
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error('Gagal memperoleh token akses Google Workspace.');
@@ -73,11 +87,17 @@ export const googleWorkspaceSignIn = async (): Promise<{
 
 export const getWorkspaceAccessToken = (): string | null => cachedAccessToken;
 
-export const getCurrentWorkspaceUser = (): User | null => auth.currentUser;
+export const getCurrentWorkspaceUser = (): User | null => {
+  try {
+    return getAuthInstance().currentUser;
+  } catch {
+    return null;
+  }
+};
 
 export const workspaceSignOut = async (): Promise<void> => {
   cachedAccessToken = null;
-  await auth.signOut();
+  await getAuthInstance().signOut();
 };
 
 async function wsFetch<T>(url: string, init: RequestInit = {}): Promise<T> {

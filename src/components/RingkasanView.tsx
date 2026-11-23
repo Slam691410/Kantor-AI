@@ -1,10 +1,25 @@
 import React from 'react';
+import { PORTAL_DATA } from '../data/portalData';
+import { KATALOG_ASET } from '../data/katalog';
 
 export const RingkasanView: React.FC = () => {
+  const deskRoles = PORTAL_DATA.desks.reduce((sum, unit) => sum + unit.jabatan.length, 0);
+  const supportRoles = PORTAL_DATA.support.reduce((sum, unit) => sum + unit.jabatan.length, 0);
+  const totalRoles = Math.max(1, deskRoles + supportRoles);
   const kpis = [
-    { label: 'Jenis aset', val: '160', sub: '14 kelompok', pct: 100 },
-    { label: 'Desk investasi', val: '12', sub: '40 jabatan', pct: 52 },
-    { label: 'Fungsi pendukung', val: '12', sub: '50 jabatan', pct: 48 },
+    { label: 'Jenis aset', val: String(KATALOG_ASET.length), sub: `${PORTAL_DATA.kelas.length} kelompok`, pct: 100 },
+    {
+      label: 'Desk investasi',
+      val: String(PORTAL_DATA.desks.length),
+      sub: `${deskRoles} jabatan`,
+      pct: Math.round((deskRoles / totalRoles) * 100),
+    },
+    {
+      label: 'Fungsi pendukung',
+      val: String(PORTAL_DATA.support.length),
+      sub: `${supportRoles} jabatan`,
+      pct: Math.round((supportRoles / totalRoles) * 100),
+    },
     { label: 'Opex fase 1', val: 'Rp15,2', sub: 'miliar/tahun', pct: 19 },
   ];
 
@@ -13,7 +28,7 @@ export const RingkasanView: React.FC = () => {
       <div>
         <h2 className="text-[17px] font-semibold text-[#e8eefc]">1 · Ringkasan</h2>
         <p className="text-[12.5px] text-[#9fb0d0]">
-          Angka kunci dari 160 jenis aset yang dikelola satu holding dengan modal sendiri.
+          Angka kunci dari {KATALOG_ASET.length} jenis aset yang dikelola satu holding dengan modal sendiri.
         </p>
       </div>
 
@@ -57,13 +72,13 @@ export const RingkasanView: React.FC = () => {
             </div>
             <div
               className="grid place-items-center bg-gradient-to-r from-[#6ea8fe] to-[#9cc3ff] text-[#0b1e38]"
-              style={{ width: '27%' }}
+              style={{ width: '28%' }}
             >
-              Remote 26%
+              Remote 28%
             </div>
             <div
               className="grid place-items-center bg-gradient-to-r from-[#e0a83a] to-[#f3c46b] text-[#2a1d00]"
-              style={{ width: '23%' }}
+              style={{ width: '22%' }}
             >
               Kantor 22%
             </div>

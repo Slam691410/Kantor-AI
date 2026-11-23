@@ -27,6 +27,8 @@ interface MapsLocationBoxProps {
 const OFFICE_COORDS = { lat: -6.2297, lng: 106.8095 }; // Kantor Pusat SCBD Jakarta
 const MAPS_API_KEY =
   (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined) || getGasMapsKey();
+// Pakai Map ID milik deployment untuk Advanced Markers; DEMO_MAP_ID hanya fallback lokal.
+const MAP_ID = (import.meta.env.VITE_GOOGLE_MAP_ID as string | undefined) || 'DEMO_MAP_ID';
 
 function calcDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -147,7 +149,7 @@ export const MapsLocationBox: React.FC<MapsLocationBoxProps> = ({
             region="ID"
           >
             <GoogleMap
-              mapId="DEMO_MAP_ID"
+              mapId={MAP_ID}
               internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
               defaultCenter={value ? { lat: value.lat, lng: value.lng } : OFFICE_COORDS}
               defaultZoom={15}

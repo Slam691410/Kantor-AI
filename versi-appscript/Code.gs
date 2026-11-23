@@ -542,6 +542,11 @@ function gasApiDispatch(route, token, payload) {
     return { ok: true };
   }
 
+  if (route === 'auth.me') {
+    var me = requireUser_(token);
+    return { user: toPublicUser_(me) };
+  }
+
   if (route === 'dashboard.get') {
     requireUser_(token);
     var keu = baca_(SHEET.keuangan);
@@ -595,6 +600,8 @@ function gasApiDispatch(route, token, payload) {
 
   if (route === 'intake.status') {
     var u = requireUser_(token, ['Pemilik', 'Manajemen', 'Staf']);
+    var validIntake = ['Masuk', 'Direview', 'Perlu Info', 'Disetujui', 'Ditolak'];
+    if (validIntake.indexOf(payload.aksi) < 0) throw new Error('Status intake tidak valid.');
     var list = baca_(SHEET.intake);
     var target = list.filter(function (x) { return x.ID === payload.id; })[0];
     if (!target) throw new Error('Permintaan intake tidak ditemukan.');
@@ -648,6 +655,8 @@ function gasApiDispatch(route, token, payload) {
     if (!target) throw new Error('Catatan kas tidak ditemukan.');
     var patch = {};
     if (payload.status !== undefined) {
+      var validKas = ['Draft', 'Terverifikasi', 'Disetujui'];
+      if (validKas.indexOf(payload.status) < 0) throw new Error('Status kas tidak valid.');
       if (payload.status === 'Disetujui' && target.Jenis === 'Keluar' && Number(target.Nominal) > 100000000 && peringkat_(u) < 3) {
         throw new Error('Persetujuan pengeluaran > Rp100 juta wajib Direktur.');
       }
@@ -655,6 +664,7 @@ function gasApiDispatch(route, token, payload) {
       target.Status = payload.status;
     }
     if (payload.rekonsiliasi !== undefined) {
+      if (['Belum', 'Sudah'].indexOf(payload.rekonsiliasi) < 0) throw new Error('Status rekonsiliasi tidak valid.');
       patch.Rekonsiliasi = payload.rekonsiliasi;
       target.Rekonsiliasi = payload.rekonsiliasi;
     }
@@ -686,6 +696,9 @@ function gasApiDispatch(route, token, payload) {
 
   if (route === 'tugas.update') {
     var u = requireUser_(token, ['Pemilik', 'Manajemen', 'Staf', 'Freelancer']);
+    if (['Belum', 'Proses', 'Selesai'].indexOf(payload.status) < 0) {
+      throw new Error('Status tugas harus Belum, Proses, atau Selesai.');
+    }
     var target = baca_(SHEET.tugas).filter(function (x) { return x.ID === payload.id; })[0];
     if (!target) throw new Error('Tugas tidak ditemukan.');
     perbaruiBaris_(SHEET.tugas, target._rowIndex, { Status: payload.status });
@@ -734,6 +747,9 @@ function gasApiDispatch(route, token, payload) {
 
   if (route === 'absen.verify') {
     var u = requireUser_(token, ['Pemilik', 'Manajemen']);
+    if (['terverifikasi', 'ditolak'].indexOf(payload.status) < 0) {
+      throw new Error('Status verifikasi absen tidak valid.');
+    }
     var target = baca_(SHEET.absen).filter(function (x) { return x.ID === payload.id; })[0];
     if (!target) throw new Error('Data absen tidak ditemukan.');
     perbaruiBaris_(SHEET.absen, target._rowIndex, { StatusVerifikasi: payload.status, DiverifikasiOleh: u.Nama });
@@ -759,6 +775,9 @@ function gasApiDispatch(route, token, payload) {
       Tanggal: tanggalWib_()
     };
     if (!item.Judul || !item.Isi) throw new Error('Judul dan isi dokumen wajib diisi.');
+    if (item.Isi.length > 20000) throw new Error('Isi dokumen melebihi batas 20.000 karakter.');
+    item.Judul = item.Judul.slice(0, 180);
+    item.Jenis = item.Jenis.slice(0, 60);
     tambah_(SHEET.dokumen, item);
     appendAudit_(u.Nama, 'Dokumen ' + item.ID + ': ' + item.Judul, 'Dokumen');
     return item;
